@@ -1,0 +1,19 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "nixpacks",
+    "buildpacks": ["node"]
+  },
+  "deploy": {
+    "numReplicas": 1,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10,
+    "startCommand": "bun run src/cli/cmd/chat-server.ts",
+    "environment": [
+      {
+        "key": "NODE_ENV",
+        "value": "production"
+      }
+    ]
+  }
+}

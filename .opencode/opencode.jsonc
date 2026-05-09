@@ -1,0 +1,18 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {},
+  "model": "minimax/m2.5-free",
+  "permission": {
+    "edit": {
+      "packages/opencode/migration/*": "ask",
+    },
+  },
+  "mcp": {},
+  "tools": {
+    "github-triage": false,
+    "github-pr-search": false,
+  },
+  "chat": {
+    "server": "ws://localhost:8765"
+  }
+}
