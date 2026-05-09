@@ -18,7 +18,8 @@
     "prepare": "husky",
     "random": "echo 'Random script'",
     "hello": "echo 'Hello World!'",
-    "test": "echo 'do not run tests from root' && exit 1"
+    "test": "echo 'do not run tests from root' && exit 1",
+    "start:chat": "bun run packages/opencode/src/cli/cmd/chat-server.ts"
   },
   "workspaces": {
     "packages": [
