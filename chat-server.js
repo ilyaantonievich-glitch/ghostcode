@@ -2,9 +2,14 @@
 /**
  * Standalone Chat WebSocket Server
  * Deploy anywhere - no external dependencies needed
+ * 
+ * Environment variables:
+ *   PORT - порт (по умолчанию 8765)
+ *   CHAT_PASSWORD - пароль для доступа (по умолчанию "ghostcode")
  */
 
 const PORT = parseInt(process.env.PORT || "8765")
+const PASSWORD = process.env.CHAT_PASSWORD || "ghostcode"
 
 interface ChatMessage {
   id: string
@@ -18,6 +23,7 @@ interface Client {
   ws: any
   username: string
   joinedAt: number
+  authorized: boolean
 }
 
 const clients = new Map<string, Client>()
@@ -75,6 +81,29 @@ wss.on("connection", (ws, req) => {
   ws.on("message", async (data) => {
     try {
       const msg = JSON.parse(data.toString())
+
+      // Handle password verification first
+      if (msg.type === "auth") {
+        if (msg.password !== PASSWORD) {
+          ws.send(JSON.stringify({ type: "error", message: "Invalid password" }))
+          ws.close()
+          return
+        }
+        // Auth successful - mark client as authorized
+        const client = clients.get(clientId)
+        if (client) {
+          client.authorized = true
+          console.log(`[Chat] 🔐 ${client.username} authenticated`)
+        }
+        return
+      }
+
+      // Check if authorized for other actions
+      const client = clients.get(clientId)
+      if (!client?.authorized) {
+        ws.send(JSON.stringify({ type: "error", message: "Not authenticated. Send {type:'auth', password:'xxx'}" }))
+        return
+      }
 
       if (msg.type === "register") {
         const username = msg.username || "Anonymous"
