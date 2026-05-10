@@ -57,7 +57,7 @@ export function ChatSidebar(props: { onClose: () => void }) {
 
   let inputRef: any = undefined
 
-  const root = getMemoryRoot(project)
+  const root = getMemoryRoot(project) || path.join(process.env.HOME || process.env.USERPROFILE || ".", ".ghostcode-chat")
   const kv = useKV()
   const currentAuthor = () => (kv.get("chat_nickname") as string) || getAuthor(sync)
 
