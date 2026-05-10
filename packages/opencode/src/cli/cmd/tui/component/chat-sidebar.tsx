@@ -8,6 +8,7 @@ import {
   readChatMessages,
   readChatThreads,
   createChatThread,
+  autoConnectChatServer,
   type ChatMessage,
   type ChatThread,
 } from "./prompt/chat"
@@ -83,6 +84,7 @@ export function ChatSidebar(props: { onClose: () => void }) {
   onMount(() => {
     loadThreads()
     loadMessages()
+    autoConnectChatServer(currentAuthor())
     setTimeout(() => {
       if (inputRef) {
         try {

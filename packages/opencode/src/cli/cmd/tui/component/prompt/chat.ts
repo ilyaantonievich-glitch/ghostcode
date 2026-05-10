@@ -36,15 +36,56 @@ export function getChatTransport(): ChatTransport {
 
 let wsClient: any = null
 let wsSubscribers: ((message: ChatMessage) => void)[] = []
+let reconnectAttempts = 0
+let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
+let currentUsername = ""
+
+export function getChatServerURL(): string | undefined {
+  return process.env.CHAT_SERVER_URL || process.env.OPENCODE_CHAT_SERVER
+}
+
+function scheduleReconnect() {
+  if (reconnectTimeout) return
+  
+  const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000)
+  reconnectAttempts++
+  
+  console.log(`[Chat] Reconnecting in ${delay/1000}s (attempt ${reconnectAttempts})...`)
+  
+  reconnectTimeout = setTimeout(() => {
+    reconnectTimeout = null
+    if (getChatServerURL()) {
+      connectToChatServer(getChatServerURL()!, currentUsername)
+    }
+  }, delay)
+}
+
+export async function autoConnectChatServer(username: string): Promise<void> {
+  const url = getChatServerURL()
+  if (!url) {
+    console.log("[Chat] Using local mode (no server URL)")
+    return
+  }
+  currentUsername = username
+  await connectToChatServer(url, username)
+}
 
 export async function connectToChatServer(url: string, username: string): Promise<void> {
+  if (wsClient) {
+    try { wsClient.close() } catch {}
+  }
+  
+  reconnectAttempts = 0
+  currentUsername = username
+  
   try {
     const WebSocketModule = await import("ws")
     const WS = WebSocketModule.default || WebSocketModule.WebSocket
     wsClient = new WS(url)
 
     wsClient.on("open", () => {
-      console.log("[Chat] Connected to server")
+      console.log("[Chat] ✓ Connected to server")
+      reconnectAttempts = 0
       wsClient.send(JSON.stringify({ type: "register", username }))
     })
 
@@ -52,22 +93,27 @@ export async function connectToChatServer(url: string, username: string): Promis
       try {
         const msg = JSON.parse(data.toString())
         if (msg.type === "welcome") {
-          console.log(`[Chat] Welcome! ${msg.history?.length || 0} messages in history`)
+          console.log(`[Chat] ✓ Welcome! ${msg.history?.length || 0} messages loaded`)
         } else if (msg.id) {
           wsSubscribers.forEach((cb) => cb(msg))
+        } else if (msg.type === "users") {
+          console.log(`[Chat] ${msg.count} users online`)
         }
       } catch {}
     })
 
     wsClient.on("close", () => {
-      console.log("[Chat] Disconnected from server")
+      console.log("[Chat] ✗ Disconnected from server")
+      scheduleReconnect()
     })
 
     wsClient.on("error", (err: any) => {
-      console.error("[Chat] Connection error:", err.message)
+      console.error("[Chat] ✗ Connection error:", err.message)
+      scheduleReconnect()
     })
   } catch (e) {
-    console.error("[Chat] Failed to connect:", e)
+    console.error("[Chat] ✗ Failed to connect:", e)
+    scheduleReconnect()
   }
 }
 
@@ -81,65 +127,6 @@ export function subscribeToChat(callback: (message: ChatMessage) => void): () =>
   wsSubscribers.push(callback)
   return () => {
     wsSubscribers = wsSubscribers.filter((cb) => cb !== callback)
-  }
-}
-
-export function createWebSocketTransport(url: string): ChatTransport {
-  let ws: any = null
-  let subscribers: ((message: ChatMessage) => void)[] = []
-  let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
-  let connected = false
-
-  const connect = async () => {
-    try {
-      const WebSocketModule = await import("ws")
-      const WS = WebSocketModule.default || WebSocketModule.WebSocket
-      ws = new WS(url)
-
-      ws.onopen = () => {
-        connected = true
-        console.log("[Chat] WebSocket connected")
-      }
-
-      ws.onmessage = (event: any) => {
-        try {
-          const message = JSON.parse(event.data) as ChatMessage
-          subscribers.forEach((cb) => cb(message))
-        } catch (e) {
-          console.error("[Chat] Failed to parse message:", e)
-        }
-      }
-
-      ws.onclose = () => {
-        connected = false
-        console.log("[Chat] WebSocket disconnected, reconnecting...")
-        reconnectTimeout = setTimeout(connect, 3000)
-      }
-
-      ws.onerror = (error: any) => {
-        console.error("[Chat] WebSocket error:", error)
-      }
-    } catch (e) {
-      console.error("[Chat] Failed to connect:", e)
-    }
-  }
-
-  connect()
-
-  return {
-    send: async (message: ChatMessage) => {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify(message))
-      } else {
-        await appendFile(chatFilePath(getDefaultRoot() ?? ""), JSON.stringify(message) + "\n")
-      }
-    },
-    subscribe: (callback: (message: ChatMessage) => void) => {
-      subscribers.push(callback)
-      return () => {
-        subscribers = subscribers.filter((cb) => cb !== callback)
-      }
-    },
   }
 }
 

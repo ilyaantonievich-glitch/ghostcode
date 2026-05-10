@@ -29,7 +29,6 @@ import { EOL } from "os"
 import { WebCommand } from "./cli/cmd/web"
 import { PrCommand } from "./cli/cmd/pr"
 import { SessionCommand } from "./cli/cmd/session"
-import ChatServerCommand from "./cli/cmd/chat-server"
 import { DbCommand } from "./cli/cmd/db"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
@@ -178,7 +177,6 @@ const cli = yargs(args)
   .command(SessionCommand)
   .command(PluginCommand)
   .command(DbCommand)
-  .command(ChatServerCommand)
   .fail((msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||

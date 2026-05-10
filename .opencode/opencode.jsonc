@@ -10,9 +10,6 @@
   "mcp": {},
   "tools": {
     "github-triage": false,
-    "github-pr-search": false,
-  },
-"chat": {
-  "server": "wss://cyan-turkeys-train.loca.lt"
-}
+    "github-pr-search": false
+  }
 }
