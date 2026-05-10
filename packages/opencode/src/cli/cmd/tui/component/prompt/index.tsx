@@ -89,13 +89,6 @@ import {
   unpinPath,
   type ContextItem,
 } from "./context-inspector"
-import {
-  addChatMessage,
-  chatFilePath,
-  deleteChatMessage,
-  readChatMessages,
-  type ChatMessage,
-} from "./chat"
 
 const VIBE_DIRNAME = ".vibe"
 const VIBE_MEMORY = "memory.md"
@@ -1122,90 +1115,6 @@ return {
     return completeLocalCommand()
   }
 
-async function handleChatCommand(input: string) {
-    const root = getMemoryRoot(project)
-    const trimmed = input.trim()
-    const parts = trimmed.split(/\s+/)
-    const author = sync.data.console_state.activeOrgName || process.env.USERNAME || process.env.USER || "user"
-
-    if (parts[0] === "/nick") {
-      const nickname = parts.slice(1).join(" ").trim()
-      if (!nickname) {
-        const currentNick = (kv.get("chat_nickname") as string) || author
-        toast.show({ message: `Current nickname: ${currentNick}. Usage: /nick <new_nickname>`, variant: "info", duration: 5000 })
-        return completeLocalCommand()
-      }
-      kv.set("chat_nickname", nickname)
-      toast.show({ message: `Nickname set to: ${nickname}`, variant: "success", duration: 3000 })
-      return completeLocalCommand()
-    }
-
-    if (parts[0] !== "/chat") return false
-
-    const action = parts[1]
-
-    if (!action || action === "show" || action === "list" || action === "open") {
-      kv.set("chat_visible", true)
-      toast.show({ message: "Chat sidebar opened! Type @username to send to specific person, or just type message to send to all.", variant: "info", duration: 5000 })
-      return completeLocalCommand()
-    }
-
-    if (action === "close" || action === "hide") {
-      kv.set("chat_visible", false)
-      toast.show({ message: "Chat closed. Use /chat to open again.", variant: "info", duration: 3000 })
-      return completeLocalCommand()
-    }
-
-    if (!root) {
-      toast.show({ message: "Project path unavailable for chat", variant: "error" })
-      return completeLocalCommand()
-    }
-
-    if (action.startsWith("@")) {
-      const spaceIdx = action.indexOf(" ")
-      let recipient = action.slice(1)
-      let text = ""
-
-      if (spaceIdx > 0) {
-        recipient = action.slice(1, spaceIdx)
-        text = trimmed.split(/\s+/).slice(2).join(" ")
-      } else {
-        text = trimmed.split(/\s+/).slice(2).join(" ")
-      }
-
-      if (!text) {
-        toast.show({ message: `Usage: /chat @${recipient} <message>`, variant: "warning", duration: 4000 })
-        return completeLocalCommand()
-      }
-
-      await addChatMessage(root, text, author, `to:${recipient}`)
-      toast.show({ message: `Message sent to @${recipient}`, variant: "success", duration: 3000 })
-      return completeLocalCommand()
-    }
-
-    if (action === "msg" || !action.startsWith("@")) {
-      const text = action === "msg" 
-        ? trimmed.slice("/chat msg".length).trim()
-        : trimmed.slice("/chat".length).trim()
-      
-      if (!text) {
-        toast.show({ message: "Usage: /chat @username <message> or /chat <message for all>", variant: "warning", duration: 4000 })
-        return completeLocalCommand()
-      }
-      
-      await addChatMessage(root, text, author)
-      toast.show({ message: "Message sent to all", variant: "success", duration: 3000 })
-      return completeLocalCommand()
-    }
-
-    toast.show({
-      message: "Usage: /chat (open) | /chat close | /chat @username <message> | /chat <message>",
-      variant: "warning",
-      duration: 4000,
-    })
-return completeLocalCommand()
-  }
-
   function selectWorkspace(selection: WorkspaceSelection | undefined) {
     setWorkspaceSelection(selection)
   }
@@ -1762,19 +1671,6 @@ return completeLocalCommand()
           dialog.clear()
         },
       },
-      {
-        title: "Project chat",
-        desc: "Show messages or send /chat @username message",
-        name: "prompt.chat",
-        category: "Prompt",
-        slashName: "chat",
-        run: () => {
-          input.setText("/chat list")
-          setStore("prompt", { input: "/chat list", parts: [] })
-          input.gotoBufferEnd()
-          dialog.clear()
-        },
-      },
       ...["frontend", "backend", "reviewer", "devops", "designer"].map((preset) => ({
         title: `Preset: ${preset}`,
         desc: `Run a prompt with the ${preset} preset agent`,
@@ -2200,8 +2096,6 @@ return completeLocalCommand()
 if (trimmed.startsWith("/agent")) return await handleAgentCommand(trimmed)
     if (trimmed.startsWith("/agents debate")) return await handleDebateCommand(trimmed)
     if (trimmed.startsWith("/context")) return await handleContextCommand(trimmed)
-    if (trimmed.startsWith("/chat")) return await handleChatCommand(trimmed)
-    if (trimmed.startsWith("/nick")) return await handleChatCommand(trimmed)
     if (trimmed === "exit" || trimmed === "quit" || trimmed === ":q") {
       void exit()
       return true
