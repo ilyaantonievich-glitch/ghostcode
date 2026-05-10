@@ -2,11 +2,6 @@ FROM oven/bun:1
 
 WORKDIR /app
 
-# Copy only opencode package files
-COPY packages/opencode/package.json packages/opencode/bun.lock* ./
-RUN bun install --frozen-lockfile
+COPY chat-server.js ./
 
-# Copy source
-COPY packages/opencode/src ./src
-
-CMD ["bun", "run", "src/cli/cmd/chat-server.ts"]
+CMD ["bun", "run", "chat-server.js"]
