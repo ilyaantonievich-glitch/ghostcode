@@ -1,8 +1,18 @@
+/**
+ * Chat WebSocket Server
+ * 
+ * Запускается с переменной окружения CHAT_SERVER_URL для работы в режиме клиента.
+ * Для запуска сервера: bun run packages/opencode/src/cli/cmd/chat-server.ts
+ * 
+ * Переменные окружения:
+ *   PORT - порт сервера (по умолчанию 8765)
+ *   CHAT_SERVER_URL - URL для подключения к внешнему серверу (клиентский режим)
+ */
+
 import { WebSocketServer, WebSocket } from "ws"
 import { randomUUID } from "crypto"
 import { readFile, writeFile, mkdir } from "fs/promises"
 import path from "path"
-import { cmd } from "./cmd"
 
 const PORT = parseInt(process.env.PORT || "8765", 10)
 
@@ -23,6 +33,7 @@ interface Client {
 const clients = new Map<string, Client>()
 const HISTORY_FILE = path.join(process.cwd(), ".vibe", "chat-history.json")
 
+/** Создает файл истории сообщений если его нет */
 async function ensureHistoryFile() {
   try {
     await mkdir(path.dirname(HISTORY_FILE), { recursive: true })
