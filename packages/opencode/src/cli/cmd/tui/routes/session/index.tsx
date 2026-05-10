@@ -62,7 +62,6 @@ import { DialogTimeline } from "./dialog-timeline"
 import { DialogForkFromTimeline } from "./dialog-fork-from-timeline"
 import { DialogSessionRename } from "../../component/dialog-session-rename"
 import { Sidebar } from "./sidebar"
-import { ChatSidebar } from "../../component/chat-sidebar"
 import { SubagentFooter } from "./subagent-footer.tsx"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { LANGUAGE_EXTENSIONS } from "@/lsp/language"
@@ -190,12 +189,10 @@ export function Session() {
   const [diffWrapMode] = kv.signal<"word" | "none">("diff_wrap_mode", "word")
   const [_animationsEnabled, _setAnimationsEnabled] = kv.signal("animations_enabled", true)
   const [showGenericToolOutput, setShowGenericToolOutput] = kv.signal("generic_tool_output_visibility", false)
-  const [chatOpen, setChatOpen] = kv.signal("chat_visible", false)
-
   const wide = createMemo(() => dimensions().width > 120)
   const sidebarVisible = createMemo(() => false)
   const showTimestamps = createMemo(() => timestamps() === "show")
-  const contentWidth = createMemo(() => dimensions().width - (sidebarVisible() ? 42 : 0) - (chatOpen() ? 42 : 0) - 4)
+  const contentWidth = createMemo(() => dimensions().width - (sidebarVisible() ? 42 : 0) - 4)
   const providers = createMemo(() => Model.index(sync.data.provider))
 
   const scrollAcceleration = createMemo(() => getScrollAcceleration(tuiConfig))
@@ -1233,9 +1230,6 @@ export function Session() {
               </box>
             </Match>
           </Switch>
-        </Show>
-        <Show when={chatOpen()}>
-          <ChatSidebar onClose={() => kv.set("chat_visible", false)} />
         </Show>
       </box>
     </context.Provider>
