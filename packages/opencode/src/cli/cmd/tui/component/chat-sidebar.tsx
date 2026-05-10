@@ -10,6 +10,7 @@ import {
   createChatThread,
   autoConnectChatServer,
   subscribeToChat,
+  sendToChatServer,
   type ChatMessage,
   type ChatThread,
 } from "./prompt/chat"
@@ -134,7 +135,8 @@ export function ChatSidebar(props: { onClose: () => void }) {
 
     const to = recipient()
     const threadId = activeThread()
-    await addChatMessage(root, text, currentAuthor(), threadId ? `thread:${threadId}` : (to ? `to:${to}` : undefined))
+    const msg = await addChatMessage(root, text, currentAuthor(), threadId ? `thread:${threadId}` : (to ? `to:${to}` : undefined))
+    sendToChatServer(msg)
     setInputValue("")
     if (inputRef) {
       try {
