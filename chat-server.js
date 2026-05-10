@@ -1,36 +1,16 @@
 #!/usr/bin/env bun
 /**
  * Standalone Chat WebSocket Server
- * Deploy anywhere - no external dependencies needed
- * 
- * Environment variables:
- *   PORT - порт (по умолчанию 8765)
- *   CHAT_PASSWORD - пароль для доступа (по умолчанию "ghostcode")
+ * No external dependencies
  */
 
 const PORT = parseInt(process.env.PORT || "8765")
 const PASSWORD = process.env.CHAT_PASSWORD || "ghostcode"
 
-interface ChatMessage {
-  id: string
-  timestamp: string
-  author: string
-  text: string
-  thread_id?: string
-}
-
-interface Client {
-  ws: any
-  username: string
-  joinedAt: number
-  authorized: boolean
-}
-
-const clients = new Map<string, Client>()
-
+const clients = new Map()
 const HISTORY_FILE = "/tmp/chat-history.json"
 
-async function loadHistory(): Promise<ChatMessage[]> {
+async function loadHistory() {
   try {
     const { readFile } = await import("fs/promises")
     const content = await readFile(HISTORY_FILE, "utf-8")
@@ -38,7 +18,7 @@ async function loadHistory(): Promise<ChatMessage[]> {
   } catch { return [] }
 }
 
-async function saveMessage(msg: ChatMessage) {
+async function saveMessage(msg) {
   try {
     const { readFile, writeFile } = await import("fs/promises")
     const history = await loadHistory()
@@ -48,7 +28,7 @@ async function saveMessage(msg: ChatMessage) {
   } catch {}
 }
 
-function broadcast(message: ChatMessage, excludeId?: string) {
+function broadcast(message, excludeId) {
   const data = JSON.stringify(message)
   clients.forEach((client, id) => {
     if (id !== excludeId && client.ws.readyState === 1) {
@@ -57,7 +37,7 @@ function broadcast(message: ChatMessage, excludeId?: string) {
   })
 }
 
-function broadcastToAll(obj: object) {
+function broadcastToAll(obj) {
   const data = JSON.stringify(obj)
   clients.forEach((client) => {
     if (client.ws.readyState === 1) {
@@ -66,11 +46,11 @@ function broadcastToAll(obj: object) {
   })
 }
 
-// Simple WebSocket server using Node's built-in module
 const { createServer } = await import("http")
 const server = createServer()
 
-const wss = new (await import("ws")).WebSocketServer({ server })
+const { WebSocketServer } = await import("ws")
+const wss = new WebSocketServer({ server })
 
 wss.on("connection", (ws, req) => {
   const clientId = crypto.randomUUID()
@@ -82,14 +62,12 @@ wss.on("connection", (ws, req) => {
     try {
       const msg = JSON.parse(data.toString())
 
-      // Handle password verification first
       if (msg.type === "auth") {
         if (msg.password !== PASSWORD) {
           ws.send(JSON.stringify({ type: "error", message: "Invalid password" }))
           ws.close()
           return
         }
-        // Auth successful - mark client as authorized
         const client = clients.get(clientId)
         if (client) {
           client.authorized = true
@@ -98,16 +76,15 @@ wss.on("connection", (ws, req) => {
         return
       }
 
-      // Check if authorized for other actions
       const client = clients.get(clientId)
       if (!client?.authorized) {
-        ws.send(JSON.stringify({ type: "error", message: "Not authenticated. Send {type:'auth', password:'xxx'}" }))
+        ws.send(JSON.stringify({ type: "error", message: "Not authenticated" }))
         return
       }
 
       if (msg.type === "register") {
         const username = msg.username || "Anonymous"
-        clients.set(clientId, { ws, username, joinedAt: Date.now() })
+        clients.set(clientId, { ws, username, joinedAt: Date.now(), authorized: true })
         console.log(`[Chat] 👤 ${username} joined`)
         
         const history = await loadHistory()
@@ -120,7 +97,7 @@ wss.on("connection", (ws, req) => {
         const client = clients.get(clientId)
         if (!client) return
 
-        const fullMsg: ChatMessage = {
+        const fullMsg = {
           id: crypto.randomUUID(),
           timestamp: new Date().toISOString(),
           author: client.username,
