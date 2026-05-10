@@ -1,4 +1,4 @@
-import { createSignal, For, onMount, createEffect, Show } from "solid-js"
+import { createSignal, For, onMount, createEffect, Show, onCleanup } from "solid-js"
 import { useTheme } from "../context/theme"
 import { useProject } from "@tui/context/project"
 import { useSync } from "@tui/context/sync"
@@ -9,6 +9,7 @@ import {
   readChatThreads,
   createChatThread,
   autoConnectChatServer,
+  subscribeToChat,
   type ChatMessage,
   type ChatThread,
 } from "./prompt/chat"
@@ -81,10 +82,17 @@ export function ChatSidebar(props: { onClose: () => void }) {
     }
   }
 
+  let unsubscribe: (() => void) | undefined
+
   onMount(() => {
     loadThreads()
     loadMessages()
     autoConnectChatServer(currentAuthor())
+    
+    unsubscribe = subscribeToChat((msg) => {
+      setMessages((prev) => [...prev, msg])
+    })
+    
     setTimeout(() => {
       if (inputRef) {
         try {
@@ -92,6 +100,10 @@ export function ChatSidebar(props: { onClose: () => void }) {
         } catch {}
       }
     }, 300)
+  })
+
+  onCleanup(() => {
+    if (unsubscribe) unsubscribe()
   })
 
   createEffect(() => {
