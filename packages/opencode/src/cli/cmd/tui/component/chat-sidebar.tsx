@@ -220,9 +220,9 @@ export function ChatSidebar(props: { onClose: () => void }) {
       </box>
 
       <box
-        height={7}
+        height={10}
         paddingX={2}
-        paddingY={1}
+        paddingY={2}
         border-top={`1px ${theme.border}`}
         justifyContent="center"
       >
